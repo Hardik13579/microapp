@@ -60,6 +60,7 @@ type App struct {
 	server          *http.Server
 	log             zerolog.Logger
 	eventDispatcher event.Dispatcher
+	isCloud         bool
 }
 
 // NewWithEnvValues creates a new application with environment variable values for initializing database, event dispatcher and logger.
@@ -77,6 +78,12 @@ func NewWithEnvValues(appName string, appConfigDefaults map[string]interface{}) 
 	}
 	consoleOnlyLogger.Info().Msgf("Staring: %v", appName)
 	// consoleOnlyLogger := zerolog.New(consoleWriter).With().Timestamp().Str("service", appName).Logger().Level()
+
+	// set tenant is cloud type or not from env variable
+	isCloud := false
+	if strings.ToUpper(appConfig.GetString("LICENSE_MODE")) == "CLOUD" {
+		isCloud = true
+	}
 
 	var err error
 	var appEventDispatcher event.Dispatcher
@@ -98,7 +105,7 @@ func NewWithEnvValues(appName string, appConfigDefaults map[string]interface{}) 
 	//TODO: Need to wait till eventDispatcher is ready
 	time.Sleep(5 * time.Second)
 
-	app := App{Name: appName, Config: appConfig, log: *appLogger, eventDispatcher: appEventDispatcher}
+	app := App{Name: appName, Config: appConfig, log: *appLogger, eventDispatcher: appEventDispatcher, isCloud: isCloud}
 	err = app.initializeDB()
 	if err != nil {
 		consoleOnlyLogger.Fatal().Err(err).Msg("Failed to initialize database, exiting the application!!")
@@ -121,6 +128,7 @@ func NewWithEnvValues(appName string, appConfigDefaults map[string]interface{}) 
 // New creates a new microApp
 func New(appName string, appConfigDefaults map[string]interface{}, appLog zerolog.Logger, appDB *gorm.DB, appMemcache *memcache.Client, appEventDispatcher event.Dispatcher) *App {
 	appConfig := config.NewConfig(appConfigDefaults)
+	// TODO: seee if need to set isCloud here too, if yes then set from appconfig?
 	return &App{Name: appName, Config: appConfig, log: appLog, DB: appDB, MemcachedClient: appMemcache, eventDispatcher: appEventDispatcher}
 }
 
@@ -329,6 +337,10 @@ func (app *App) Stop() {
 			sqlDB.Close()
 		}
 	}
+}
+
+func (app *App) IsTenantCloudType() bool {
+	return app.isCloud
 }
 
 type httpStatusRecorder struct {
