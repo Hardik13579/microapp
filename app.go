@@ -488,7 +488,8 @@ func (app *App) setTLSClientConfig() (*tls.Config, error) {
 		if err != nil {
 			return nil, errors.New(fmt.Sprintf("unable to read TLS_CERT with err: %s", err.Error()))
 		}
-		certPool.AppendCertsFromPEM(pemBytes)
+		ok := certPool.AppendCertsFromPEM(pemBytes)
+		fmt.Printf("\n\nOK? -%v\n\n", ok)
 	}
 
 	tlsConfig.RootCAs = certPool
